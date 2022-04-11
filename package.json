@@ -1,0 +1,23 @@
+{
+    "name": "rasp-textmaid",
+    "version": "1.0.0",
+    "description": "Discord bot operating from a personal ubuntu server",
+    "main": "index.js",
+    "scripts": {
+        "main": "node index.js"
+    },
+    "keywords": [
+        "discord",
+        "bot",
+        "discordbot",
+        "discordjs"
+    ],
+    "author": "ir4un",
+    "license": "ISC",
+    "dependencies": {
+        "discord.js": "^13.6.0",
+        "dotenv": "^16.0.0",
+        "node-fetch": "^3.2.3",
+        "nodemon": "^2.0.15"
+    }
+}
