@@ -1,23 +1,21 @@
 {
-    "name": "rasp-textmaid",
-    "version": "1.0.0",
-    "description": "Discord bot operating from a personal ubuntu server",
-    "main": "index.js",
-    "scripts": {
-        "main": "node index.js"
-    },
-    "keywords": [
-        "discord",
-        "bot",
-        "discordbot",
-        "discordjs"
-    ],
-    "author": "ir4un",
-    "license": "ISC",
-    "dependencies": {
-        "discord.js": "^13.6.0",
-        "dotenv": "^16.0.0",
-        "node-fetch": "^3.2.3",
-        "nodemon": "^2.0.15"
-    }
+  "name": "test",
+  "version": "1.0.0",
+  "description": "A simple bot that i created just for fun",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "ir4un",
+  "license": "ISC",
+  "dependencies": {
+    "@discordjs/builders": "^0.12.0",
+    "@discordjs/opus": "^0.5.3",
+    "@discordjs/rest": "^0.3.0",
+    "@discordjs/voice": "^0.8.0",
+    "discord-api-types": "^0.31.1",
+    "discord-player": "^5.2.2",
+    "discord.js": "^13.6.0",
+    "dotenv": "^16.0.0"
+  }
 }

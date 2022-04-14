@@ -1,46 +1,69 @@
-const Discord = require('discord.js');
-const fs = require('fs');
+const Discord = require("discord.js");
+const { REST } = require("@discordjs/rest");
+const { Routes } = require("discord-api-types/v10");
+const { prefix } = require("./config.json");
+const dotenv = require("dotenv");
+dotenv.config();
+const fs = require("fs");
+const { Player } = require("discord-player");
 const client = new Discord.Client({
     intents: [
-        // Intents.FLAGS.GUILDS,
-        // Intents.FLAGS.GUILD_MESSAGES
         "GUILDS",
+        "GUILD_VOICE_STATES",
         "GUILD_MESSAGES"
     ]
 });
-const { prefix } = require('./config.json');
-require("dotenv").config();
-client.commands = new Discord.Collection();
-const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
 
-for (const file of commandFiles) {
-    const command = require(`./commands/${file}`);
-    // set a new item in the Collection
-    // with the key as the command name and the value as the exported module
-    client.commands.set(command.name, command);
+const botToken = process.env.token
+const LoadSlash = process.argv[2] == "load";
+const botID = "839758708313030658";
+const guildID = "369507262886051850"
+
+client.slashcommands = new Discord.Collection();
+client.player = new Player(client, {
+    ytdlOptions: {
+        quality: "highestaudio",
+        highWaterMark: 1 << 25
+    }
+});
+
+let commands = [];
+
+const slashFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
+
+for (const file of slashFiles) {
+    const slashcmd = require(`./commands/${file}`);
+    client.slashcommands.set(slashcmd.data.name, slashcmd);
+    if (LoadSlash) commands.push(slashcmd.data.toJSON());
 }
 
-client.on('ready', () => {
-    console.log(`${client.user.tag} ready to serve!`);
-    // client.user.setActivity('With Myself', { type: 'PLAYING' })
-    //     .then(presence => console.log(`Activity set to ${presence.activities[0]}`))
-    //     .catch(console.error);
-});
+if (LoadSlash) {
+    const rest = new REST({ version: "10" }).setToken(botToken);
+    console.log("Slash commands initiated!");
+    rest.put(Routes.applicationGuildCommands(botID, guildID), { body: commands })
+        .then(() => {
+            console.log("Loaded Sucessfully!");
+            process.exit(0);
+        })
+        .catch((err) => {
+            console.log(err);
+            process.exit(1);
+        })
+} else {
+    client.on('ready', () => {
+        console.log(`${client.user.tag} ready to serve!`);
+    });
+    client.on("interactionCreate", (interaction) => {
+        async function handleCommand() {
+            if (!interaction.isCommand()) return
+            const slashCmd = client.slashcommands.get(interaction.commandName);
+            if (!slashCmd) interaction.reply("Not a valid slash command, master!");
 
-client.on('messageCreate', message => {
-    const args = message.content.slice(prefix.length).trim().split(' ');
-    const command = args.shift().toLowerCase();
-    if (!message.content.startsWith(prefix) || message.author.bot) return;
-    if (!client.commands.has(command)) return;
+            await interaction.deferReply();
+            await slashCmd.run({ client, interaction });
+        }
 
-    try {
-        client.commands.get(command).execute(message, args, client, Discord);
-        // console.log(args);
-    } catch (error) {
-        console.error(error);
-        message.reply('I am sorry master! I cant seem to understand what you are tryna say :^(');
-    }
-    // ...
-});
-
-client.login(process.env.token);
+        handleCommand();
+    })
+    client.login(botToken);
+}
