@@ -1,6 +1,6 @@
-# discordBotHost
+# Text Maid Lexica
 
-A simple bot that i created just for fun
+A simple bot that I created just for fun
 
 Currently available commands: <br/>
 }hello - Says hello to the bot <br/>
