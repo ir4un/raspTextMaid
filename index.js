@@ -10,14 +10,15 @@ const client = new Discord.Client({
     intents: [
         "GUILDS",
         "GUILD_VOICE_STATES",
-        "GUILD_MESSAGES"
+        "GUILD_MESSAGES",
+        "DIRECT_MESSAGES"
     ]
 });
 
-const botToken = process.env.token
+const botToken = process.env.TOKEN
 const LoadSlash = process.argv[2] == "load";
-const botID = "839758708313030658";
-const guildID = "369507262886051850"
+const botID = process.env.BOT_CLIENT_ID;
+const guildID = process.env.BOT_GUILD_ID;
 
 client.slashcommands = new Discord.Collection();
 client.player = new Player(client, {
