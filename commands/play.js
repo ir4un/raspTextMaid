@@ -25,7 +25,7 @@ module.exports = {
     //     .setDescription("Search for songs based on provided keyword")
     //     .addStringOption((option) => option.setName("searchterms").setDescription("the search keyword").setRequired(true))
     // ),
-    run: async({ client, interaction }) => {
+    run: async ({ client, interaction }) => {
 
         // Checks if the user is inside a voice channel
         if (!interaction.member.voice.channel)
@@ -56,7 +56,7 @@ module.exports = {
             embed
                 .setDescription(`**${result.tracks.length}** tracks from **[${playlist.title}](${playlist.url})** has been added to the song queue nyaa~`)
                 .setThumbnail(playlist.thumbnail)
-                // .setFooter({ text: `Duration: ${playlist.duration}` })
+            // .setFooter({ text: `Duration: ${playlist.duration}` })
 
 
 
