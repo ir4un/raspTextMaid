@@ -2,9 +2,9 @@
 <!-- <img src="https://github.com/Sia-WRWD/Baby-Ghost-MelbHack/blob/main/assets/hungry.png" alt="avatar.png"> -->
 
 ## What is this?
-A simple bot that I created just for fun
+A simple bot that I created just for fun and is capable of providing a multitude of useful services to fulfil your lust and desires
 
-## Commands (Starts with a "}"):
+## Commands (Starts with a "]"):
 Currently available commands:
 - }hello - Says hello to the bot
 - }ping - request ping from the bot

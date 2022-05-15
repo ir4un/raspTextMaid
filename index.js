@@ -45,7 +45,6 @@ for (const file of slashFiles) {
         client.slashcommands.set(slashcmd.data.name, slashcmd)
         if (LoadSlash) commands.push(slashcmd.data.toJSON());
     } catch (error) {
-        console.log("🚀 ~ file: index.js ~ line 47 ~ error", error)
     }
 }
 
