@@ -17,7 +17,7 @@ const client = new Discord.Client({
     allowedMentions: ["users"]
 });
 
-const botToken = process.env.TOKEN
+const botToken = process.env.BOT_TOKEN
 const LoadSlash = process.argv[2] == "load";
 const botID = process.env.BOT_CLIENT_ID;
 const guildID = process.env.BOT_GUILD_ID;
