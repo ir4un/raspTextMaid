@@ -1,7 +1,7 @@
 const Discord = require("discord.js");
 const { REST } = require("@discordjs/rest");
 const { Routes } = require("discord-api-types/v10");
-const { prefix } = require("./config.json");
+var configData = require("./config.json");
 const dotenv = require("dotenv");
 dotenv.config();
 const fs = require("fs");
@@ -21,6 +21,10 @@ const botToken = process.env.BOT_TOKEN
 const LoadSlash = process.argv[2] == "load";
 const botID = process.env.BOT_CLIENT_ID;
 const guildID = process.env.BOT_GUILD_ID;
+
+// var file_content = fs.readFileSync(filename);
+// var content = JSON.parse(file_content);
+// var val1 = content.val1; 
 
 client.slashcommands = new Discord.Collection();
 client.commands = new Discord.Collection();
@@ -86,9 +90,20 @@ if (LoadSlash) { // Runs if the bot is turned on with "node index.js load"
     })
 
     client.on('messageCreate', async (message) => {
-        if (!message.content.startsWith(prefix) || message.author.bot) return;
 
-        const args = message.content.slice(prefix.length).trim().split(/ +/g);
+        // cum word detector
+        if (message.content.includes("cum") && !message.author.id.includes("839758708313030658")) {
+            configData.storedData.cumAmount++ // updates cum amount in memory
+            //change the value in the in-memory object
+            fs.writeFileSync("./config.json", JSON.stringify(configData)); // writes latest cum amount in config.json file
+            console.log("User said cum!");
+            message.reply(`Master <@${message.author.id}> said cum! 💦 Current cum word total count: ${configData.storedData.cumAmount}`);
+
+        }
+
+        if (!message.content.startsWith(configData.prefix) || message.author.bot) return;
+
+        const args = message.content.slice(configData.prefix.length).trim().split(/ +/g);
         const commandName = args.shift().toLowerCase();
         const command = client.commands.get(commandName);
         // console.log(command)
