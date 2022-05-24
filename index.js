@@ -92,7 +92,7 @@ if (LoadSlash) { // Runs if the bot is turned on with "node index.js load"
     client.on('messageCreate', async (message) => {
 
         // cum word detector
-        if (message.content.includes("cum") && !message.author.id.includes("839758708313030658")) {
+        if (message.content.includes("cum") && !message.author.id.includes("839758708313030658") || message.content.includes("Cum")) {
             configData.storedData.cumAmount++ // updates cum amount in memory
             //change the value in the in-memory object
             fs.writeFileSync("./config.json", JSON.stringify(configData)); // writes latest cum amount in config.json file
