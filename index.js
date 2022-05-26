@@ -22,7 +22,7 @@ const LoadSlash = process.argv[2] == "load";
 const botID = process.env.BOT_CLIENT_ID;
 const guildID = process.env.BOT_GUILD_ID;
 
-const firebaseIndex = require("./firebase/firebase-index.js")
+const cumDetector = require("./features/cumDetector");
 
 // var file_content = fs.readFileSync(filename);
 // var content = JSON.parse(file_content);
@@ -94,13 +94,8 @@ if (LoadSlash) { // Runs if the bot is turned on with "node index.js load"
     client.on('messageCreate', async (message) => {
 
         const senderID = message.author.id;
-        // cum word detector
-        if (!senderID.includes("839758708313030658") && !message.content.toLowerCase().startsWith("]cum") && message.content.toLowerCase().includes("cum")) {
-            var cumCounter = await firebaseIndex.fbCumUpdate(senderID);
-            console.log("User said cum!");
-            message.reply(`cum detected! Master <@${message.author.id}> has said cum ${cumCounter} amount of times! My goodness! \n Type ]cum for more details!`);
-
-        }
+        // cum word detector function
+        await cumDetector.cumDetectorFunc(senderID, message);
 
         if (!message.content.startsWith(configData.prefix) || message.author.bot) return;
 
