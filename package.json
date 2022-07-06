@@ -13,6 +13,8 @@
     "@discordjs/opus": "^0.5.3",
     "@discordjs/rest": "^0.3.0",
     "@discordjs/voice": "^0.8.0",
+    "countdown": "^2.6.0",
+    "date-calculator": "^1.0.3",
     "discord-api-types": "^0.31.1",
     "discord-player": "^5.2.2",
     "discord-reply": "^0.1.2",

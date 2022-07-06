@@ -6,6 +6,26 @@ fbAdmin.initializeApp({
 
 const db = fbAdmin.firestore();
 
+async function fbCumRead(senderID) {
+
+    var data = db.collection("text-history").doc("CUM_HISTORY")
+    const doc = await data.get();
+    const retrievedData = doc.data();
+
+    if (!doc.exists) {
+        console.log('No such document!');
+    } else {
+
+        if (retrievedData[senderID]) {
+            var cumDetails = retrievedData[senderID];
+        } else {
+            var cumDetails = 0;
+        }
+
+        return cumDetails;
+    }
+
+}
 async function fbCumUpdate(senderID) {
 
     try {
@@ -60,5 +80,5 @@ async function fbCumUpdate(senderID) {
     }
 }
 
-module.exports = { fbCumUpdate };
+module.exports = { fbCumUpdate, fbCumRead };
 

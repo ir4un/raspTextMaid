@@ -16,7 +16,7 @@ async function cumDetectorFunc(senderID, message) {
                 cumMessage = `Master <@${message.author.id}> has said cum ${cumCounter} for the second time! Hopefully this doesn't get worst. \n Type ]cum for more details!`
                 break;
             default:
-                cumMessage = `Cum detected! Master <@${message.author.id}> has said cum ${cumCounter} amount of times! My goodness! \n Type ]cum for more details!`
+                cumMessage = `Cum detected! Master <@${message.author.id}> has said cum ${cumCounter} amount of times! My goodness! \nType ]cum for more details!`
                 break;
         }
 
