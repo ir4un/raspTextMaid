@@ -1,4 +1,4 @@
-const Discord = require("discord.js");
+const { Discord, Collection, Client, GatewayIntentBits } = require("discord.js");
 const { REST } = require("@discordjs/rest");
 const { Routes } = require("discord-api-types/v10");
 var configData = require("./config.json");
@@ -6,12 +6,14 @@ const dotenv = require("dotenv");
 dotenv.config();
 const fs = require("fs");
 const { Player } = require("discord-player");
-const client = new Discord.Client({
+
+const client = new Client({
     intents: [
-        "GUILDS",
-        "GUILD_VOICE_STATES",
-        "GUILD_MESSAGES",
-        "DIRECT_MESSAGES"
+
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildVoiceStates,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.DirectMessages,
 
     ],
     allowedMentions: ["users"]
@@ -29,8 +31,8 @@ const cumDetector = require("./features/cumDetector");
 // var content = JSON.parse(file_content);
 // var val1 = content.val1; 
 
-client.slashcommands = new Discord.Collection();
-client.commands = new Discord.Collection();
+client.slashcommands = new Collection();
+client.commands = new Collection();
 
 client.player = new Player(client, {
     ytdlOptions: {
