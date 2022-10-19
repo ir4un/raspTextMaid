@@ -7,7 +7,7 @@ module.exports = {
         .setDescription("displays the current song queue")
         .addNumberOption((option) => option.setName("page").setDescription("Page number of the queue").setMinValue(1)),
 
-    run: async({ client, interaction }) => {
+    run: async ({ client, interaction }) => {
         const queue = client.player.getQueue(interaction.guildId)
         if (!queue || !queue.playing) {
             return await interaction.editReply("You havent told me to play any songs yet master nyaa~")
@@ -28,14 +28,14 @@ module.exports = {
         await interaction.editReply({
             embeds: [
                 new MessageEmbed()
-                .setDescription(`**Currently Playing**\n` +
-                    (currentSong ? `\` [${currentSong.duration}]\` ${currentSong.title} -- <@${currentSong.requestedBy.id}>` : "None") +
-                    `\n\n**Queue**\n${queueString}`
-                )
-                .setFooter({
-                    text: `Page: ${page + 1} of ${totalPages}`
-                })
-                .setThumbnail(currentSong.thumbnail)
+                    .setDescription(`**Currently Playing**\n` +
+                        (currentSong ? `\` [${currentSong.duration}]\` ${currentSong.title} -- <@${currentSong.requestedBy.id}>` : "None") +
+                        `\n\n**Queue**\n${queueString}`
+                    )
+                    .setFooter({
+                        text: `Page: ${page + 1} of ${totalPages}`
+                    })
+                    .setThumbnail(currentSong.setThumbnail)
 
             ]
         })

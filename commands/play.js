@@ -75,7 +75,7 @@ module.exports = {
             await queue.addTrack(song)
             embed
                 .setDescription(`**[${song.title}](${song.url})** has been added to the song queue nyaa~`)
-                .setThumbnail(song.thumbnail)
+                .setThumbnail(song.setThumbnail)
                 .setFooter({ text: `Duration: ${song.duration}` })
 
         } else {
@@ -104,3 +104,83 @@ module.exports = {
         })
     }
 };
+
+module.exports.prefixRun = async (client, message, args) => {
+
+    const vc = message.member.voice.channel;
+    // Checks if the user is inside a voice channel
+    if (!vc)
+        return message.channel.send("Sorry masta, but you need to be in a voice channel for me to play the song for you")
+
+    const queue = await client.player.createQueue(message.guild, {
+        leaveOnEnd: false,
+        // leaveOnStop: false,
+        // leaveOnEmpty: false,
+        // leaveOnEmptyCooldown: 10000
+    })
+    if (!queue.connection) await queue.connect(vc)
+
+    let embed = new MessageEmbed()
+
+    // if (args.includes("playlist")) {
+
+    // let url = interaction.options.getString("urlsearchterm")
+    // const result = await client.player.search(url, {
+    //     requestedBy: interaction.user,
+    //     searchEngine: QueryType.YOUTUBE_PLAYLIST
+    // })
+    // if (result.tracks.length === 0)
+    //     return interaction.editReply("I couldn't find songs for you master nyaa~");
+
+    // const playlist = result.playlist;
+    // await queue.addTracks(result.tracks)
+    // embed
+    //     .setDescription(`**${result.tracks.length}** tracks from **[${playlist.title}](${playlist.url})** has been added to the song queue nyaa~`)
+    //     .setThumbnail(playlist.thumbnail)
+    // .setFooter({ text: `Duration: ${playlist.duration}` })
+
+
+
+    // } else if (interaction.options.getString("urlsearchterm").includes("youtube.com") &&
+    //     interaction.options.getString("urlsearchterm").includes("youtu.be.com")) {
+
+    // let url = interaction.options.getString("urlsearchterm")
+    // const result = await client.player.search(url, {
+    //     requestedBy: interaction.user,
+    //     searchEngine: QueryType.YOUTUBE_VIDEO
+    // })
+    // if (result.tracks.length === 0)
+    //     return interaction.editReply("I couldn't find songs for you master nyaa~");
+
+    // const song = result.tracks[0];
+    // await queue.addTrack(song)
+    // embed
+    //     .setDescription(`**[${song.title}](${song.url})** has been added to the song queue nyaa~`)
+    //     .setThumbnail(song.setThumbnail)
+    //     .setFooter({ text: `Duration: ${song.duration}` })
+
+    // } else {
+
+    let url = args.join(" ");
+    const result = await client.player.search(url, {
+        requestedBy: message.author.user,
+        searchEngine: QueryType.AUTO
+    })
+    if (result.tracks.length === 0)
+        return message.channel.send("I couldn't find songs for you master nyaa~")
+
+    const song = result.tracks[0];
+    await queue.addTrack(song)
+    embed
+        .setThumbnail(song.setThumbnail)
+        .setDescription(`**[${song.title}](${song.url})** has been added to the song queue nyaa~`)
+        .setFooter({ text: `Duration: ${song.duration}` })
+
+    //}
+
+    if (!queue.playing) await queue.play();
+
+    await message.channel.send({
+        embeds: [embed]
+    })
+}

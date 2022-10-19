@@ -23,7 +23,6 @@ const botID = process.env.BOT_CLIENT_ID;
 const guildID = process.env.BOT_GUILD_ID;
 
 const cumDetector = require("./features/cumDetector");
-const dadDetector = require("./features/dadDetector");
 
 
 // var file_content = fs.readFileSync(filename);
@@ -98,8 +97,6 @@ if (LoadSlash) { // Runs if the bot is turned on with "node index.js load"
         const senderID = message.author.id;
         // cum word detector function
         await cumDetector.cumDetectorFunc(senderID, message);
-        // WIP Dad feature
-        // await dadDetector.dadDetectorFunc(senderID, message);
         if (!message.content.startsWith(configData.prefix) || message.author.bot) return;
 
         const args = message.content.slice(configData.prefix.length).trim().split(/ +/g);
