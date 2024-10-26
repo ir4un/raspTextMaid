@@ -1,23 +1,42 @@
-const { SlashCommandBuilder } = require("@discordjs/builders");
-const { MessageEmbed, Message } = require("discord.js");
+import { SlashCommandBuilder } from "@discordjs/builders";
+import { EmbedBuilder } from "discord.js";
+import { retrieveResponse, retrieveGif } from "../resources/responses.js";
 
-module.exports = {
+export const commandTitle = {
     data: new SlashCommandBuilder()
         .setName("spank")
         .setDescription("Choose a target for Text Maid Lexica to spank")
-        .addUserOption((option) => option.setName("spanktarget").setDescription("Mention the target").setRequired(true)),
+        .addUserOption(option =>
+            option.setName("spanktarget")
+                .setDescription("Mention the target")
+                .setRequired(true)
+        ),
 
-    run: async({ client, interaction }) => {
-        // const user = client.users.cache.get(interaction.member.user.id);
-        let spankTarget = interaction.options.getUser("spanktarget");
+    run: async ({ client, interaction }) => {
+        try {
+            // Get the target user to spank from the command options
+            const spankTarget = interaction.options.getUser("spanktarget");
 
-        const { retrieveResponse, retrieveGif } = require('./extra-files/responses');
+            // Retrieve the response message and gif
+            const responseMessage = retrieveResponse(spankTarget);
+            const gifMessage = retrieveGif();
 
-        await interaction.editReply(retrieveResponse(spankTarget))
-        await interaction.channel.send(retrieveGif());
+            // Reply with the spank response
+            await interaction.editReply(responseMessage);
+
+            // Send the gif message in the same channel
+            await interaction.followUp(gifMessage);
+
+        } catch (error) {
+            console.error("Error executing the /spank command:", error);
+            await interaction.reply({
+                content: "Sorry, something went wrong while executing this command!",
+                ephemeral: true
+            });
+        }
     }
-
 };
+
 
 // const fetch = require('node-fetch');
 

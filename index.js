@@ -1,123 +1,254 @@
-const { Discord, Collection, Client, GatewayIntentBits } = require("discord.js");
-const { REST } = require("@discordjs/rest");
-const { Routes } = require("discord-api-types/v10");
-var configData = require("./config.json");
-const dotenv = require("dotenv");
+import { Client, GatewayIntentBits, Collection } from "discord.js";
+import { REST } from "@discordjs/rest";
+import { Routes } from "discord-api-types/v10";
+import fs from "fs"; // Node's built-in file system module
+import dotenv from "dotenv";
+import path from "path"; // Import path module to handle file paths
+import { Player } from 'discord-player';
+import { YoutubeiExtractor } from "discord-player-youtubei"
+import { fileURLToPath } from 'url'; // Import fileURLToPath to convert URL to path
+import { dirname } from 'path';
+
 dotenv.config();
-const fs = require("fs");
-const { Player } = require("discord-player");
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const configData = JSON.parse(fs.readFileSync(path.join(__dirname, "config.json")));
+const guildsFilePath = path.join(__dirname, "guilds.json");
+const botToken = process.env.BOT_TOKEN;
+const LoadSlash = process.argv[2] === "load";
+const botID = process.env.BOT_CLIENT_ID;
+const rest = new REST({ version: "10" }).setToken(botToken);
 
 const client = new Client({
     intents: [
-
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildVoiceStates,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.DirectMessages,
-
+        GatewayIntentBits.MessageContent
     ],
-    allowedMentions: ["users"]
+    allowedMentions: { parse: ["users"] }
 });
 
-const botToken = process.env.BOT_TOKEN
-const LoadSlash = process.argv[2] == "load";
-const botID = process.env.BOT_CLIENT_ID;
-const guildID = process.env.BOT_GUILD_ID;
-
-const cumDetector = require("./features/cumDetector");
-
-
-// var file_content = fs.readFileSync(filename);
-// var content = JSON.parse(file_content);
-// var val1 = content.val1; 
 
 client.slashcommands = new Collection();
 client.commands = new Collection();
-
-client.player = new Player(client, {
+const player = new Player(client, {
     ytdlOptions: {
         quality: "highestaudio",
         highWaterMark: 1 << 25
     }
 });
 
+client.player = player;
+
+await player.extractors.loadDefault();
+player.extractors.register(YoutubeiExtractor);
 let commands = [];
+let commandList = [];
 
-const slashFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
-const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
+// Function to get all command files recursively
+const getAllCommandFiles = (dir) => {
+    let files = [];
+    fs.readdirSync(dir).forEach(file => {
+        const fullPath = path.join(dir, file);
+        if (fs.statSync(fullPath).isDirectory()) {
+            files = [...files, ...getAllCommandFiles(fullPath)]; // Recursion for directories
+        } else if (file.endsWith('.js')) {
+            files.push(fullPath); // Collecting the full path
+        }
+    });
+    return files;
+};
 
-
-// Read command files for slash commands
-for (const file of slashFiles) {
-    const slashcmd = require(`./commands/${file}`);
+// Function to clear and reload commands
+async function refreshSlashCommands(guildIDs) {
     try {
-        client.slashcommands.set(slashcmd.data.name, slashcmd)
-        if (LoadSlash) commands.push(slashcmd.data.toJSON());
+        console.log('Started refreshing application (/) commands...');
+
+        const deletePromises = guildIDs.map(async guildID => {
+            // Fetch current guild commands
+            const commands = await rest.get(Routes.applicationGuildCommands(botID, guildID));
+
+            // Delete each command
+            const deletePromises = commands.map(command =>
+                rest.delete(Routes.applicationGuildCommand(botID, guildID, command.id))
+            );
+            await Promise.all(deletePromises);
+            console.log(`Deleted commands in guild ${guildID}`);
+
+            // Re-register the updated commands
+            await rest.put(Routes.applicationGuildCommands(botID, guildID), { body: commandsToRegister });
+            console.log(`Re-registered commands in guild ${guildID}`);
+        });
+
+        await Promise.all(deletePromises);
+
+        console.log('Successfully refreshed application (/) commands.');
     } catch (error) {
+        console.error('Error refreshing commands:', error);
     }
 }
 
-// Read command files for prefix commands
-for (const file2 of commandFiles) {
-    const commandName = file2.split(".")[0]
-    const command = require(`./commands/${file2}`);
-    client.commands.set(commandName, command);
+// Get all command files
+const commandFiles = getAllCommandFiles(path.join(process.cwd(), 'commands')); // Use process.cwd() for the root directory
+
+// Read command files for slash commands
+for (const file of commandFiles) {
+    const slashcmd = await import("file://" + file); // Convert backslashes to forward slashes
+    const commandName = path.basename(file, '.js'); // Extract command name without .js extension
+    const commandEntry = { name: commandName, prefix: '✅', slash: '✅' }; // Default values
+
+    try {
+        if (slashcmd.commandTitle && slashcmd.commandTitle.data && slashcmd.commandTitle.data.name) {
+            client.slashcommands.set(slashcmd.commandTitle.data.name, slashcmd);
+            if (LoadSlash) commands.push(slashcmd.commandTitle.data.toJSON());
+        } else {
+            commandEntry.slash = '❌'; // Mark slash command with 'x'
+        }
+    } catch (error) {
+        console.error(`Error loading slash command from ${file}:`, error);
+    }
+
+    try {
+        // Convert to file URL format for import
+        if (slashcmd.commandTitle && slashcmd.commandTitle.prefixRun) {
+            const command = await import(`file://${path.resolve(file)}`); // Use path.resolve to get absolute path
+            client.commands.set(commandName.toLowerCase(), command); // Store command using the command name
+        } else {
+            commandEntry.prefix = '❌'; // Mark slash command with 'x'
+        }
+
+    } catch (error) {
+        console.error(`Error loading prefix command from ${file}:`, error);
+    }
+
+    commandList.push(commandEntry);
 }
 
 
-if (LoadSlash) { // Runs if the bot is turned on with "node index.js load"
-    const rest = new REST({ version: "10" }).setToken(botToken);
-    console.log("Slash commands initiated!");
-    rest.put(Routes.applicationGuildCommands(botID, guildID), { body: commands })
+
+// Load command registration only if needed
+if (LoadSlash) {
+
+
+    // Get all guild IDs the bot is currently in
+    const guildIDslist = loadGuildIDs();
+    const currentGuildIDs = client.guilds.cache.map(guild => guild.id);
+
+    // Save guild IDs to the JSON file if not already saved
+    currentGuildIDs.forEach(guildID => {
+        if (!guildIDslist.includes(guildID)) {
+            guildIDslist.push(guildID);
+            console.log(`Added guild ID: ${guildID}`);
+        }
+    });
+
+    // Save the updated guild IDs back to the JSON file
+    saveGuildIDs(guildIDslist);
+
+    console.log("Guild IDs saved to guilds.json.");
+    const guildIDs = JSON.parse(fs.readFileSync('guilds.json')); // Populate this array with your target guild IDs
+
+    refreshSlashCommands(guildIDs);
+
+    const promises = guildIDs.map(guildID => {
+        return rest.put(Routes.applicationGuildCommands(botID, guildID), { body: commands })
+            .then(() => console.log(`Loaded commands for guild ${guildID} successfully!`))
+            .catch(err => console.error(`Failed to load commands for guild ${guildID}:`, err));
+    });
+
+    Promise.all(promises)
         .then(() => {
-            console.log("Loaded Sucessfully!");
+            // After the loop, log the complete command list
+            console.log(`--- List of Added Commands ---`);
+            const nameWidth = 15; // Width for command names
+            const prefixWidth = 8; // Width for prefix column
+            const slashWidth = 8; // Width for slash column
+
+            console.log(`Name${' '.repeat(nameWidth - 4)}Prefix${' '.repeat(prefixWidth - 6)}Slash`); // Print the header
+            commandList.forEach(cmd => {
+                // Format each command's details with fixed width
+                console.log(`${cmd.name.padEnd(nameWidth)}${cmd.prefix.padEnd(prefixWidth)}${cmd.slash.padEnd(slashWidth)}`);
+            });
+            console.log("All commands loaded successfully!");
             process.exit(0);
         })
-        .catch((err) => {
-            console.log(err);
+        .catch(err => {
+            console.error("Error loading commands:", err);
             process.exit(1);
-        })
-} else { // Runs if the bot is turned on with "node index.js"
+        });
+} else {
 
     client.on('ready', () => {
         console.log(`${client.user.tag} ready to serve!`);
     });
-    client.on("interactionCreate", (interaction) => {
-        async function handleCommand() {
-            if (!interaction.isCommand()) return
-            const slashCmd = client.slashcommands.get(interaction.commandName);
-            if (!slashCmd) interaction.reply("Not a valid slash command, master!");
 
-            await interaction.deferReply();
-            await slashCmd.run({ client, interaction });
+    client.on("interactionCreate", async (interaction) => {
+        if (!interaction.isCommand()) return;
+
+
+        const slashCmd = client.slashcommands.get(interaction.commandName);
+        if (!slashCmd) {
+            console.error(`Command not found: ${interaction.commandName}`);
+            return interaction.reply("Not a valid slash command, master!");
         }
-        handleCommand();
-    })
 
+        await interaction.deferReply(); // Defer the reply to indicate processing time
+
+        try {
+            // Execute the command, passing the interaction to it
+            await slashCmd.commandTitle.run({ client, interaction });
+            // Assuming the command handles its own response
+        } catch (error) {
+            console.error('Error executing command:', error);
+            // If the command didn't reply, we can send an error message
+            if (!interaction.replied) {
+                await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+            }
+        }
+    });
+
+    // Handle incoming messages
     client.on('messageCreate', async (message) => {
 
-        const senderID = message.author.id;
-        // cum word detector function
-        await cumDetector.cumDetectorFunc(senderID, message);
-        if (!message.content.startsWith(configData.prefix) || message.author.bot) return;
+        if (message.author.bot) return; // Ignore bot messages
+
+        if (!message.content.startsWith(configData.prefix)) return;
 
         const args = message.content.slice(configData.prefix.length).trim().split(/ +/g);
         const commandName = args.shift().toLowerCase();
-        const command = client.commands.get(commandName);
-        // console.log(command)
-        if (!client.commands.has(commandName)) return;
+        const command = await client.commands.get(commandName);
 
         try {
-            await command.prefixRun(client, message, args) // Executes prefix command
-            message.delete(1000);
+            // Check if prefixRun exists in the commandTitle object, if not, it will ignore
+            if (command.commandTitle && typeof command.commandTitle.prefixRun === 'function') {
+                await command.commandTitle.prefixRun(client, message, args); // Executes prefix command
+            }
+            // await message.delete(); // Deletes the message
         } catch (error) {
             console.error(error);
-            message.reply('I am sorry master! I cant seem to understand what you are tryna say :^(');
+            await message.reply('I am sorry master! I can’t seem to understand what you are trying to say :^(');
         }
-        // ...
     });
 
 
 
-    client.login(botToken);
 }
+
+// Function to load existing guild IDs from the JSON file
+function loadGuildIDs() {
+    if (fs.existsSync(guildsFilePath)) {
+        const data = fs.readFileSync(guildsFilePath, "utf8");
+        return JSON.parse(data);
+    }
+    return []; // Return an empty array if the file does not exist
+}
+
+// Store the guild IDs
+function saveGuildIDs(guildIDs) {
+    fs.writeFileSync(guildsFilePath, JSON.stringify(guildIDs, null, 2), "utf8");
+}
+
+
+client.login(botToken);

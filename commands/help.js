@@ -1,12 +1,14 @@
-const { SlashCommandBuilder } = require("@discordjs/builders");
-const { MessageEmbed, Message } = require("discord.js");
 
-module.exports = {
+import { SlashCommandBuilder } from "@discordjs/builders";
+import djs from 'discord.js';
+const { MessageEmbed, Message } = djs;
+
+export const commandTitle = {
     data: new SlashCommandBuilder()
         .setName("help")
         .setDescription("Get a list of available commands for Text Maid Lexica"),
 
-    run: async({ client, interaction }) => {
+    run: async ({ client, interaction }) => {
         const user = client.users.cache.get(interaction.member.user.id);
         const commandsList = [
             'Misc\n',
