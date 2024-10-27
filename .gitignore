@@ -1,3 +1,7 @@
 /node_modules
 .env
 guilds.json
+/resources/trackingData.json
+/resources/licenseData.json
+/resources/config.json
+/resources/guilds.json

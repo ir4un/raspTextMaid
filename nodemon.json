@@ -1,0 +1,6 @@
+{
+    "ignore": [
+        "/resources/trackingData.json",
+        "/resources/licenseData.json"
+    ]
+}

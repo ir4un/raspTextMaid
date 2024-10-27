@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, Collection } from "discord.js";
+import { Client, GatewayIntentBits, Collection, EmbedBuilder } from "discord.js";
 import { REST } from "@discordjs/rest";
 import { Routes } from "discord-api-types/v10";
 import fs from "fs"; // Node's built-in file system module
@@ -8,12 +8,15 @@ import { Player } from 'discord-player';
 import { YoutubeiExtractor } from "discord-player-youtubei"
 import { fileURLToPath } from 'url'; // Import fileURLToPath to convert URL to path
 import { dirname } from 'path';
+import { getData } from "./support/plate-code.js"; // Adjust the path if necessary
 
 dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const configData = JSON.parse(fs.readFileSync(path.join(__dirname, "config.json")));
-const guildsFilePath = path.join(__dirname, "guilds.json");
+const configData = JSON.parse(fs.readFileSync(path.join(__dirname, "resources/config.json")));
+const licenseData = path.join(__dirname, 'resources/licenseData.json');// Path to save the licenseData file
+const trackingDataPath = path.join(__dirname, 'resources/trackingData.json');// Path to save the trackingData file
+const guildsFilePath = path.join(__dirname, "resources/guilds.json");
 const botToken = process.env.BOT_TOKEN;
 const LoadSlash = process.argv[2] === "load";
 const botID = process.env.BOT_CLIENT_ID;
@@ -67,9 +70,14 @@ async function refreshSlashCommands(guildIDs) {
         console.log('Started refreshing application (/) commands...');
 
         const deletePromises = guildIDs.map(async guildID => {
+
+            console.log('Started clearing global commands...');
+            await rest.put(Routes.applicationCommands(botID), { body: [] })
+
+            console.log('Successfully deleted all global commands.');
+
             // Fetch current guild commands
             const commands = await rest.get(Routes.applicationGuildCommands(botID, guildID));
-
             // Delete each command
             const deletePromises = commands.map(command =>
                 rest.delete(Routes.applicationGuildCommand(botID, guildID, command.id))
@@ -148,7 +156,7 @@ if (LoadSlash) {
     saveGuildIDs(guildIDslist);
 
     console.log("Guild IDs saved to guilds.json.");
-    const guildIDs = JSON.parse(fs.readFileSync('guilds.json')); // Populate this array with your target guild IDs
+    const guildIDs = JSON.parse(fs.readFileSync('resources/guilds.json')); // Populate this array with your target guild IDs
 
     refreshSlashCommands(guildIDs);
 
@@ -182,6 +190,8 @@ if (LoadSlash) {
 
     client.on('ready', () => {
         console.log(`${client.user.tag} ready to serve!`);
+
+        setInterval(trackLicensePlates, 3600000);
     });
 
     client.on("interactionCreate", async (interaction) => {
@@ -249,6 +259,102 @@ function loadGuildIDs() {
 function saveGuildIDs(guildIDs) {
     fs.writeFileSync(guildsFilePath, JSON.stringify(guildIDs, null, 2), "utf8");
 }
+
+const trackLicensePlates = async () => {
+    try {
+        const newData = await getData(); // Fetch new data
+
+        // Check if the licenseData file exists
+        if (!fs.existsSync(licenseData)) {
+            console.log("licenseData file not found, creating it with initial data.");
+            fs.writeFileSync(licenseData, JSON.stringify(newData, null, 2)); // Save newData as the initial data
+            console.log("Initial licenseData file created.");
+            return; // Exit the function as this is the first data set
+        }
+        // Check if the tracking data file exists
+        if (!fs.existsSync(trackingDataPath)) {
+            return; // Exit the function if the tracking data file does not exist
+        }
+
+        // Read current license data from the file
+        const currentData = JSON.parse(fs.readFileSync(licenseData, "utf8"));
+
+        // Check if the current data is the same as the retrieved data
+        if (JSON.stringify(newData) === JSON.stringify(currentData)) {
+            console.log("No changes detected, skipping update.");
+            return; // Exit the function if there's no change
+        }
+
+        const changes = {};
+        for (const region in newData) {
+            changes[region] = newData[region].filter(currPlate => {
+                // Find the previous plate based on state name
+                const prevPlate = currentData[region]?.find(p => p.state === currPlate.state);
+
+                console.log("prevPlate for", currPlate.state, ":", prevPlate); // Log previous plate
+
+                // Return true if there is no previous plate or if the plates are different
+                return !prevPlate || prevPlate.plate !== currPlate.plate; // Identify changed plates
+            });
+        }
+
+        // Prepare embed message for changes
+        const embed = new EmbedBuilder()
+            .setColor(0x0099ff)
+            .setTitle("License Plate Updates")
+            .setDescription("Here are the latest changes in license plates:");
+
+        let hasChanges = false;
+        for (const [region, plates] of Object.entries(changes)) {
+            if (plates.length > 0) {
+                hasChanges = true;
+                for (const item of plates) {
+                    // Find the previous plate in the current data based on state name
+                    const prevPlate = currentData[region]?.find(p => p.state === item.state);
+
+                    // Use the prevPlate if found, otherwise set to 'N/A'
+                    const oldPlate = prevPlate ? prevPlate.plate : 'N/A'; // If found, use the previous plate
+
+                    // Update the embed field
+                    embed.addFields({
+                        name: region,
+                        value: `${item.state} - ${oldPlate} ➡️ ${item.plate}`, // Use the old plate or 'N/A' if not found
+                        inline: false,
+                    });
+                }
+            }
+        }
+
+
+
+        // Check tracking data for channels with the toggle on and send the embed
+        const trackingData = JSON.parse(fs.readFileSync(trackingDataPath, "utf8")); // Using trackingFilePath variable
+
+        for (const [key, value] of Object.entries(trackingData.channelTracking)) {
+            // Check if tracking is enabled for this channel
+            if (value.toggle) {
+                const channelId = key.split('_')[1]; // Extract channel ID
+                const channel = await client.channels.fetch(channelId); // Get the channel by ID
+
+                // Send the embed if there are changes
+                if (hasChanges && channel) {
+                    await channel.send({ embeds: [embed] });
+                }
+            }
+        }
+
+        // Update the license data with the new data
+        fs.writeFileSync(licenseData, JSON.stringify(newData, null, 2));
+        console.log("License plate data retrieved and updated!");
+
+    } catch (error) {
+        console.error("Error updating license plate data:", error);
+    }
+};
+
+
+
+
 
 
 client.login(botToken);
