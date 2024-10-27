@@ -191,7 +191,7 @@ if (LoadSlash) {
     client.on('ready', () => {
         console.log(`${client.user.tag} ready to serve!`);
 
-        setInterval(trackLicensePlates, 3600000);
+        setInterval(trackLicensePlates, 600000);
     });
 
     client.on("interactionCreate", async (interaction) => {
@@ -271,6 +271,7 @@ const trackLicensePlates = async () => {
             console.log("Initial licenseData file created.");
             return; // Exit the function as this is the first data set
         }
+
         // Check if the tracking data file exists
         if (!fs.existsSync(trackingDataPath)) {
             return; // Exit the function if the tracking data file does not exist
@@ -288,15 +289,17 @@ const trackLicensePlates = async () => {
         const changes = {};
         for (const region in newData) {
             changes[region] = newData[region].filter(currPlate => {
-                // Find the previous plate based on state name
                 const prevPlate = currentData[region]?.find(p => p.state === currPlate.state);
-
-                console.log("prevPlate for", currPlate.state, ":", prevPlate); // Log previous plate
-
-                // Return true if there is no previous plate or if the plates are different
                 return !prevPlate || prevPlate.plate !== currPlate.plate; // Identify changed plates
             });
         }
+
+        // Define categories
+        const regions = {
+            Peninsular: ["JOHOR", "KEDAH", "KELANTAN", "MELAKA", "NEGERI SEMBILAN", "PAHANG", "PENANG", "PERAK", "PERLIS", "SELANGOR", "TERENGGANU", "KUALA LUMPUR"],
+            Sarawak: ["KAPIT", "BINTULU", "MIRI", "SIBU"],
+            Sabah: ["BEAUFORT", "KENINGAU", "TAWAU", "KOTA KINABALU"]
+        };
 
         // Prepare embed message for changes
         const embed = new EmbedBuilder()
@@ -305,38 +308,43 @@ const trackLicensePlates = async () => {
             .setDescription("Here are the latest changes in license plates:");
 
         let hasChanges = false;
-        for (const [region, plates] of Object.entries(changes)) {
-            if (plates.length > 0) {
-                hasChanges = true;
-                for (const item of plates) {
-                    // Find the previous plate in the current data based on state name
-                    const prevPlate = currentData[region]?.find(p => p.state === item.state);
 
-                    // Use the prevPlate if found, otherwise set to 'N/A'
-                    const oldPlate = prevPlate ? prevPlate.plate : 'N/A'; // If found, use the previous plate
+        // Group changes by region
+        for (const [regionName, states] of Object.entries(regions)) {
+            let regionChanged = false;
+            let regionText = '';
 
-                    // Update the embed field
-                    embed.addFields({
-                        name: region,
-                        value: `${item.state} - ${oldPlate} ➡️ ${item.plate}`, // Use the old plate or 'N/A' if not found
-                        inline: false,
-                    });
+            for (const state of states) {
+                const stateChanges = changes[regionName]?.filter(item => item.state === state) || [];
+
+                if (stateChanges.length > 0) {
+                    regionChanged = true;
+                    for (const item of stateChanges) {
+                        const prevPlate = currentData[regionName]?.find(p => p.state === item.state);
+                        const oldPlate = prevPlate ? prevPlate.plate : 'N/A';
+                        regionText += `${item.state} - ${oldPlate} ➡️ ${item.plate}\n`;
+                    }
                 }
+            }
+
+            if (regionChanged) {
+                hasChanges = true;
+                embed.addFields({
+                    name: `${regionName}`,
+                    value: regionText,
+                    inline: false,
+                });
             }
         }
 
-
-
         // Check tracking data for channels with the toggle on and send the embed
-        const trackingData = JSON.parse(fs.readFileSync(trackingDataPath, "utf8")); // Using trackingFilePath variable
+        const trackingData = JSON.parse(fs.readFileSync(trackingDataPath, "utf8"));
 
         for (const [key, value] of Object.entries(trackingData.channelTracking)) {
-            // Check if tracking is enabled for this channel
             if (value.toggle) {
-                const channelId = key.split('_')[1]; // Extract channel ID
-                const channel = await client.channels.fetch(channelId); // Get the channel by ID
+                const channelId = key.split('_')[1];
+                const channel = await client.channels.fetch(channelId);
 
-                // Send the embed if there are changes
                 if (hasChanges && channel) {
                     await channel.send({ embeds: [embed] });
                 }
@@ -351,6 +359,7 @@ const trackLicensePlates = async () => {
         console.error("Error updating license plate data:", error);
     }
 };
+
 
 
 
