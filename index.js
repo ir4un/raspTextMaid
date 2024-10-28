@@ -191,7 +191,7 @@ if (LoadSlash) {
     client.on('ready', () => {
         console.log(`${client.user.tag} ready to serve!`);
 
-        setInterval(trackLicensePlates, 600000);
+        setInterval(trackLicensePlates, 1800000);
     });
 
     client.on("interactionCreate", async (interaction) => {
@@ -322,7 +322,7 @@ const trackLicensePlates = async () => {
                     for (const item of stateChanges) {
                         const prevPlate = currentData[regionName]?.find(p => p.state === item.state);
                         const oldPlate = prevPlate ? prevPlate.plate : 'N/A';
-                        regionText += `${item.state} - ${oldPlate} ➡️ ${item.plate}\n`;
+                        regionText += `${oldPlate} ➡️ ${item.plate} - ${item.state}\n`;
                     }
                 }
             }
