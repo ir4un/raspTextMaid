@@ -9,6 +9,9 @@ import { YoutubeiExtractor } from "discord-player-youtubei"
 import { fileURLToPath } from 'url'; // Import fileURLToPath to convert URL to path
 import { dirname } from 'path';
 import { getData } from "./support/plate-code.js"; // Adjust the path if necessary
+import { createAudioPlayer } from '@discordjs/voice';
+import { AttachmentExtractor } from '@discord-player/extractor';
+import { logMessage } from './support/logger.js'; // Adjust the path if necessary
 
 dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
@@ -28,12 +31,11 @@ const client = new Client({
         GatewayIntentBits.GuildVoiceStates,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.DirectMessages,
-        GatewayIntentBits.MessageContent
+        GatewayIntentBits.MessageContent,
     ],
     allowedMentions: { parse: ["users"] }
 });
-
-
+client.login(botToken);
 client.slashcommands = new Collection();
 client.commands = new Collection();
 const player = new Player(client, {
@@ -44,9 +46,12 @@ const player = new Player(client, {
 });
 
 client.player = player;
-
 await player.extractors.loadDefault();
 player.extractors.register(YoutubeiExtractor);
+player.extractors.register(AttachmentExtractor);
+// Create the audio player
+const audioPlayer = createAudioPlayer();
+client.audioPlayer = audioPlayer;
 let commands = [];
 let commandList = [];
 
@@ -79,10 +84,10 @@ async function refreshSlashCommands(guildIDs) {
             // Fetch current guild commands
             const commands = await rest.get(Routes.applicationGuildCommands(botID, guildID));
             // Delete each command
-            const deletePromises = commands.map(command =>
+            const deletionPromises = commands.map(command =>
                 rest.delete(Routes.applicationGuildCommand(botID, guildID, command.id))
             );
-            await Promise.all(deletePromises);
+            await Promise.all(deletionPromises);
             console.log(`Deleted commands in guild ${guildID}`);
 
             // Re-register the updated commands
@@ -142,7 +147,9 @@ if (LoadSlash) {
 
     // Get all guild IDs the bot is currently in
     const guildIDslist = loadGuildIDs();
-    const currentGuildIDs = client.guilds.cache.map(guild => guild.id);
+    const guilds = await client.guilds.fetch();
+    const currentGuildIDs = guilds.map(guild => guild.id);
+    console.log("🚀 ~ currentGuildIDs:", currentGuildIDs)
 
     // Save guild IDs to the JSON file if not already saved
     currentGuildIDs.forEach(guildID => {
@@ -194,9 +201,8 @@ if (LoadSlash) {
         setInterval(trackLicensePlates, 1800000);
     });
 
-    client.on("interactionCreate", async (interaction) => {
+    client.on('interactionCreate', async (interaction) => {
         if (!interaction.isCommand()) return;
-
 
         const slashCmd = client.slashcommands.get(interaction.commandName);
         if (!slashCmd) {
@@ -204,15 +210,14 @@ if (LoadSlash) {
             return interaction.reply("Not a valid slash command, master!");
         }
 
-        await interaction.deferReply(); // Defer the reply to indicate processing time
+        await interaction.deferReply();
 
         try {
-            // Execute the command, passing the interaction to it
             await slashCmd.commandTitle.run({ client, interaction });
-            // Assuming the command handles its own response
+            logMessage(`Command executed: ${interaction.commandName}`, interaction.guild.name); // Log the command execution
         } catch (error) {
             console.error('Error executing command:', error);
-            // If the command didn't reply, we can send an error message
+            logMessage(`Error executing command: ${error.message}`, interaction.guild.name); // Log the error
             if (!interaction.replied) {
                 await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
             }
@@ -221,8 +226,7 @@ if (LoadSlash) {
 
     // Handle incoming messages
     client.on('messageCreate', async (message) => {
-
-        if (message.author.bot) return; // Ignore bot messages
+        if (message.author.bot) return;
 
         if (!message.content.startsWith(configData.prefix)) return;
 
@@ -231,19 +235,16 @@ if (LoadSlash) {
         const command = await client.commands.get(commandName);
 
         try {
-            // Check if prefixRun exists in the commandTitle object, if not, it will ignore
             if (command.commandTitle && typeof command.commandTitle.prefixRun === 'function') {
-                await command.commandTitle.prefixRun(client, message, args); // Executes prefix command
+                await command.commandTitle.prefixRun(client, message, args);
+                logMessage(`Command executed: ${commandName}`, message.guild.name); // Log the command execution
             }
-            // await message.delete(); // Deletes the message
         } catch (error) {
             console.error(error);
+            logMessage(`Error executing command: ${error.message}`, message.guild.name); // Log the error
             await message.reply('I am sorry master! I can’t seem to understand what you are trying to say :^(');
         }
     });
-
-
-
 }
 
 // Function to load existing guild IDs from the JSON file
@@ -360,10 +361,11 @@ const trackLicensePlates = async () => {
     }
 };
 
+export { player };
 
 
 
 
 
 
-client.login(botToken);
+

@@ -27,10 +27,13 @@ export const commandTitle = {
             if (currentSong && currentSong.id !== preskipsong.id) {
                 clearInterval(checkInterval); // Stop the polling
 
+                // Determine if the URL is a local file path
+                const isLocalFile = currentSong.url.startsWith('file://') || /^[a-zA-Z]:\\/.test(currentSong.url) || currentSong.url.startsWith('/');
+
                 await interaction.editReply({
                     embeds: [
                         new EmbedBuilder()
-                            .setDescription(`❌ Skipping [${preskipsong.title}](${preskipsong.url})\n⏭️ Playing **[${currentSong.title}](${currentSong.url})**`)
+                            .setDescription(`❌ Skipping [${preskipsong.title}]\n⏭️ Playing **[${currentSong.title}]${isLocalFile ? '' : `(${currentSong.url})`}**`)
                             .setThumbnail(currentSong.thumbnail)
                             .setFooter({ text: `Duration: ${currentSong.duration}` })
                     ]
