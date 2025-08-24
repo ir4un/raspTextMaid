@@ -7,7 +7,6 @@ import path from "path"; // Import path module to handle file paths
 import { Player } from 'discord-player';
 import { YoutubeiExtractor } from "discord-player-youtubei"
 import { fileURLToPath } from 'url'; // Import fileURLToPath to convert URL to path
-import { dirname } from 'path';
 import { getData } from "./support/plate-code.js"; // Adjust the path if necessary
 import { createAudioPlayer } from '@discordjs/voice';
 import { AttachmentExtractor } from '@discord-player/extractor';
@@ -15,7 +14,7 @@ import { logMessage } from './support/logger.js'; // Adjust the path if necessar
 
 dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = path.dirname(__filename);
 const configData = JSON.parse(fs.readFileSync(path.join(__dirname, "resources/config.json")));
 const licenseData = path.join(__dirname, 'resources/licenseData.json');// Path to save the licenseData file
 const trackingDataPath = path.join(__dirname, 'resources/trackingData.json');// Path to save the trackingData file
@@ -264,14 +263,6 @@ function saveGuildIDs(guildIDs) {
 const trackLicensePlates = async () => {
     try {
         const newData = await getData(); // Fetch new data
-
-        // Check if the licenseData file exists
-        if (!fs.existsSync(licenseData)) {
-            console.log("licenseData file not found, creating it with initial data.");
-            fs.writeFileSync(licenseData, JSON.stringify(newData, null, 2)); // Save newData as the initial data
-            console.log("Initial licenseData file created.");
-            return; // Exit the function as this is the first data set
-        }
 
         // Check if the tracking data file exists
         if (!fs.existsSync(trackingDataPath)) {

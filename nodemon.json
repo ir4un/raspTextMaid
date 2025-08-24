@@ -1,6 +1,7 @@
 {
     "ignore": [
         "/resources/trackingData.json",
-        "/resources/licenseData.json"
+        "/resources/licenseData.json",
+        "/resources/userPlates.json"
     ]
 }

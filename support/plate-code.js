@@ -7,6 +7,8 @@ import axios from 'axios';
 // Define __dirname for ES module compatibility
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const mainDirPath = path.join(__dirname, "../"); // Adjust this to go two levels up to reach the main project folder
+const licenseData = path.join(mainDirPath, 'resources/licenseData.json');// Path to save the licenseData file
 
 
 // Function to sanitize and clean input
@@ -53,7 +55,9 @@ export async function getData() {
         }
 
         // Write data to JSON file
-        // fs.writeFileSync(jsonFilePath, JSON.stringify(regions, null, 2));
+
+        fs.writeFileSync(licenseData, JSON.stringify(regions, null, 2)); // Save newData as the initial data
+
 
         return regions;
 
