@@ -7,7 +7,7 @@ import path from "path"; // Import path module to handle file paths
 import { Player } from 'discord-player';
 import { YoutubeiExtractor } from "discord-player-youtubei"
 import { fileURLToPath } from 'url'; // Import fileURLToPath to convert URL to path
-import { getData } from "./support/plate-code.js"; // Adjust the path if necessary
+import { getData, plateReminder, trackLicensePlates } from "./support/plate-code.js"; // Adjust the path if necessary
 import { createAudioPlayer } from '@discordjs/voice';
 import { AttachmentExtractor } from '@discord-player/extractor';
 import { logMessage } from './support/logger.js'; // Adjust the path if necessary
@@ -197,7 +197,8 @@ if (LoadSlash) {
     client.on('ready', () => {
         console.log(`${client.user.tag} ready to serve!`);
 
-        setInterval(trackLicensePlates, 1800000);
+        setInterval(trackLicensePlates, 10800000);
+        setInterval(() => plateReminder(client), 10800000);
     });
 
     client.on('interactionCreate', async (interaction) => {
@@ -259,98 +260,6 @@ function loadGuildIDs() {
 function saveGuildIDs(guildIDs) {
     fs.writeFileSync(guildsFilePath, JSON.stringify(guildIDs, null, 2), "utf8");
 }
-
-const trackLicensePlates = async () => {
-    try {
-        const newData = await getData(); // Fetch new data
-
-        // Check if the tracking data file exists
-        if (!fs.existsSync(trackingDataPath)) {
-            return; // Exit the function if the tracking data file does not exist
-        }
-
-        // Read current license data from the file
-        const currentData = JSON.parse(fs.readFileSync(licenseData, "utf8"));
-
-        // Check if the current data is the same as the retrieved data
-        if (JSON.stringify(newData) === JSON.stringify(currentData)) {
-            console.log("No changes detected, skipping update.");
-            return; // Exit the function if there's no change
-        }
-
-        const changes = {};
-        for (const region in newData) {
-            changes[region] = newData[region].filter(currPlate => {
-                const prevPlate = currentData[region]?.find(p => p.state === currPlate.state);
-                return !prevPlate || prevPlate.plate !== currPlate.plate; // Identify changed plates
-            });
-        }
-
-        // Define categories
-        const regions = {
-            Peninsular: ["JOHOR", "KEDAH", "KELANTAN", "MELAKA", "NEGERI SEMBILAN", "PAHANG", "PENANG", "PERAK", "PERLIS", "SELANGOR", "TERENGGANU", "KUALA LUMPUR"],
-            Sarawak: ["KAPIT", "BINTULU", "MIRI", "SIBU"],
-            Sabah: ["BEAUFORT", "KENINGAU", "TAWAU", "KOTA KINABALU"]
-        };
-
-        // Prepare embed message for changes
-        const embed = new EmbedBuilder()
-            .setColor(0x0099ff)
-            .setTitle("License Plate Updates")
-            .setDescription("Here are the latest changes in license plates:");
-
-        let hasChanges = false;
-
-        // Group changes by region
-        for (const [regionName, states] of Object.entries(regions)) {
-            let regionChanged = false;
-            let regionText = '';
-
-            for (const state of states) {
-                const stateChanges = changes[regionName]?.filter(item => item.state === state) || [];
-
-                if (stateChanges.length > 0) {
-                    regionChanged = true;
-                    for (const item of stateChanges) {
-                        const prevPlate = currentData[regionName]?.find(p => p.state === item.state);
-                        const oldPlate = prevPlate ? prevPlate.plate : 'N/A';
-                        regionText += `${oldPlate} ➡️ ${item.plate} - ${item.state}\n`;
-                    }
-                }
-            }
-
-            if (regionChanged) {
-                hasChanges = true;
-                embed.addFields({
-                    name: `${regionName}`,
-                    value: regionText,
-                    inline: false,
-                });
-            }
-        }
-
-        // Check tracking data for channels with the toggle on and send the embed
-        const trackingData = JSON.parse(fs.readFileSync(trackingDataPath, "utf8"));
-
-        for (const [key, value] of Object.entries(trackingData.channelTracking)) {
-            if (value.toggle) {
-                const channelId = key.split('_')[1];
-                const channel = await client.channels.fetch(channelId);
-
-                if (hasChanges && channel) {
-                    await channel.send({ embeds: [embed] });
-                }
-            }
-        }
-
-        // Update the license data with the new data
-        fs.writeFileSync(licenseData, JSON.stringify(newData, null, 2));
-        console.log("License plate data retrieved and updated!");
-
-    } catch (error) {
-        console.error("Error updating license plate data:", error);
-    }
-};
 
 export { player };
 

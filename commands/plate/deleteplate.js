@@ -25,61 +25,14 @@ function saveData() {
     fs.writeFileSync(filePath, JSON.stringify(userPlates, null, 2));
 }
 
-async function validatePlate(inputPlate) {
-    try {
-        const latestPlate = await findLatestPlateNumber(inputPlate);
-        console.log('latestPlate', latestPlate)
-
-        const inputPlateUpper = inputPlate.trim().toUpperCase();
-        const latestPlateUpper = latestPlate.trim().toUpperCase();
-
-        const inputLetters = inputPlateUpper.match(/^[A-Z]+/)?.[0] || ""; // Safely extract letters
-        const inputNumbers = parseInt(inputPlateUpper.match(/\d+$/)?.[0] || "0", 10);
-
-        const latestLetters = latestPlateUpper.match(/^[A-Z]+/)[0];
-        const latestNumbers = parseInt(latestPlateUpper.match(/\d+$/)?.[0] || "0", 10);
-
-        if (!latestPlate) {
-            return { isValid: false, message: "❌ The license plate does not belong to any Malaysian state!" }; // No matching state found
-        } else if (/[IOZ]/i.test(inputPlate)) {
-            // Check for illegal letters
-            // Case-insensitive match for I, O, Z
-            return { isValid: false, message: "❌ The license plate contains illegal letters (I, O, Z)." };
-        } else if (inputLetters.length > 3 || !/[A-Za-z]/.test(inputPlateUpper) || !/\d/.test(inputPlateUpper)) {
-            // Check if input plate letters contains at least 3 letters in the first few inputs
-            // Also checks if the user puts in only letters or only numbers
-            return { isValid: false, message: `❌ The value: ${inputPlateUpper} is not a valid license plate.` };
-        } else if (inputLetters < latestLetters) {
-            // Check if input plate letters are order or not
-            return { isValid: false, message: "❌ The license plate is no longer available" };
-        } else if (inputNumbers > 9999) {
-            // Check if input plate numbers are valid with 4 digits
-            return { isValid: false, message: "❌ The license plate number cannot be longer than 4 digits!" };
-        } else if (inputLetters == latestLetters) {
-            // When plate letters are the same, check if input plate numbers are valid or not
-            if (inputNumbers <= latestNumbers) {
-                return { isValid: false, message: "❌ The license plate number is no longer available" };
-            }
-            return { isValid: true };
-        } else {
-            // Else catcher
-            return { isValid: true };
-        }
-
-    } catch (error) {
-        console.error("Error validating plate:", error);
-        return { isValid: false };
-    }
-}
-
 export const commandTitle = {
     data: new SlashCommandBuilder()
-        .setName("addplate")
-        .setDescription("Add a license plate to your favourites.")
+        .setName("deleteplate")
+        .setDescription("Delete a plate from your favourited list.")
         .addStringOption(option =>
             option
                 .setName("plate")
-                .setDescription("License plate number (e.g., ABC1234) I, O, Z letters are not allowed!")
+                .setDescription("Please enter the license plate number you want to delete.")
                 .setRequired(true)
         ),
 
